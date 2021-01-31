@@ -1,9 +1,9 @@
-
 #Imports necesarios
 import cv2
 import numpy as np
 import cython as cy
 import time
+import pydarknet
 from pydarknet import Detector, Image
 
 def draw_prediction(img, label, confidence, x, y, x_plus_w, y_plus_h, color):
@@ -38,8 +38,6 @@ def execute(video, config, weights, coco):
     output.write(str(Width) + " " + str(Height) + "\n")
 
     average_time = 0
-
-    print(weights);    
 
     net = Detector(bytes(config, encoding="utf-8"), bytes(weights, encoding="utf-8"), 0, bytes(coco, encoding="utf-8"))
 

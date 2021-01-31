@@ -1,7 +1,0 @@
-classes=80
-train=./p1yolo/data/trainvalno5k.txt
-valid=./p1yolo/data/5k.txt
-names=./p1yolo/data/coco.names
-backup=backup/
-eval=coco
-

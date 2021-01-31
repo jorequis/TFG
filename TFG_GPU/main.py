@@ -1,26 +1,85 @@
+#Importa la libreria para obtener los argumentos necesarios
+import argparse
+#Acceso a variables usadas por el interpretador
+import sys, os
 
+#Imports para cada uno de los modulos
 import p1yolo
 import p2cropsmooth
 import p3video
 
-#yolo.py -i ..\clase.mp4 -c yolov3.cfg -w yolov3.weights -cl yolov3.txt
+#Mensaje con el modo de empleo
+usage = 'Modo de empleo: -v VÍDEO [OPCIÓN]... [FICHERO]...'
 
-#import os
+#Ruta del programa
+path = os.path.dirname(os.path.realpath(__file__)) + '/'
 
-video = "./video4k.mp4"
-config = "./p1yolo/cfg/yolov3-tiny.cfg"
-weights = "./p1yolo/weights/yolov3-tiny.weights"
-coco = "./p1yolo/cfg/coco.data"
+#Array que contiene tuplas con los argumentos
+arguments = [
+    ('-v', '--video',    False,  'Ruta del video de entrada', '../VIDEOS/video4k.mp4'),
+    ('-c', '--config',   False, 'path to yolo config file', path + '/p1yolo/cfg/yolov3-tiny.cfg'),
+    ('-w', '--weights',  False, 'path to yolo pre-trained weights', path + '/p1yolo/weights/yolov3-tiny.weights'),
+    ('-cl', '--classes', False, 'path to text file containing class names', path + '/p1yolo/cfg/coco.data')
+]
 
-p1_file = p1yolo.execute(video, config, weights, coco)
-#p1_file = "p1_output.txt"
+#Ejecuta el programa principal
+def main():
+    #Obtenemos los argumentos del programa
+    args = get_arguments()
+    #Cambiamos las rutas relativas a absolutas
+    args.video = os.path.realpath(args.video)
+    args.config = os.path.realpath(args.config)
+    args.weights = os.path.realpath(args.weights)
+    args.classes = os.path.realpath(args.classes)
 
-p2_file = p2cropsmooth.execute(p1_file, 350)
-#p2_file = "p2_output.txt"
+    #Cambiamos el directorio de trabajo a la ruta del programa para que funcionen las rutas relativas
+    os.chdir(path)
 
-p3video.execute(video, p2_file)
+    p1_file = p1yolo.execute(args.video, args.config, args.weights, args.classes)
+    #p1_file = 'p1_output.txt'
 
-#p1_file = os.popen("./p1_yolo/yolo.py" + " -v " + video + " -c " + config + " -w " + weights + " -cl " + names).read()
-#p1_file = "p1_output.txt"
-#p2_file = os.popen("./p2_crop_smooth/crop_smooth.py" + " -f " + p1_file).read()
-#p3_file = os.popen("./p3_video/video.py" + " -v " + video + " -f " + p2_file).read()
+    p2_file = p2cropsmooth.execute(p1_file, 350)
+    #p2_file = 'p2_output.txt'
+
+    p3video.execute(args.video, p2_file)
+
+#Obtiene los argumentos definidos
+def get_arguments():    
+    #Inicializamos
+    ap = argparse.ArgumentParser()
+    #Sobreescribimos la funcion que escribe un error por pantalla para que escriba lo que nosotros queremos
+    ap.error = lambda message: arguments_error(ap, message)
+    ap.print_help = lambda file=None: print_help()
+
+    #Definimos los argumentos
+    for argument in arguments:
+        ap.add_argument(argument[0], argument[1], required=argument[2], help=argument[3], default=argument[4])
+
+    return ap.parse_args()
+
+#Escribe por pantalla el error que ha producido los argumentos
+def arguments_error(argument_parser, message):
+    try_message = 'Pruebe el argumento "--help" para más información.'
+    argument_parser.exit(2, '{message}\n{try_message}\n'.format(message=message, try_message=try_message))
+
+#Escribe por pantalla el uso del programa
+def print_help():
+    print(usage)
+
+    print('\nArgumentos obligatorios')
+    for argument in arguments:
+        if argument[2]:
+            print_argument(argument)
+
+    print('\nArgumentos opcionales')
+    for argument in arguments:
+        if not argument[2]:
+            print_argument(argument)
+
+#Escribe por pantalla el uso de un argumento
+def print_argument(argument):
+    prefix = '  {a}, {b}'.format(a=argument[0], b=argument[1])
+    print('{prefix}{indent}{message}'.format(prefix=prefix, indent=" " * (25 - len(prefix)), message=argument[3]))
+
+#Si ejecutamos este script como principal invocamos el metodo Main
+if __name__ == '__main__': main()

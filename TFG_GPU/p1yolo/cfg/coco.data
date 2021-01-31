@@ -5,4 +5,3 @@ valid  = coco_testdev
 names = ./p1yolo/data/coco.names
 #backup = /home/pjreddie/backup/
 eval=coco
-

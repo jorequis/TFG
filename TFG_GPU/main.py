@@ -16,10 +16,13 @@ path = os.path.dirname(os.path.realpath(__file__)) + '/'
 
 #Array que contiene tuplas con los argumentos
 arguments = [
-    ('-v', '--video',    False,  'Ruta del video de entrada', '../VIDEOS/video4k.mp4'),
+    ('-v', '--video',    False,  'Ruta del video de entrada', path + '../VIDEOS/video4k.mp4'),
     ('-c', '--config',   False, 'path to yolo config file', path + '/p1yolo/cfg/yolov3-tiny.cfg'),
     ('-w', '--weights',  False, 'path to yolo pre-trained weights', path + '/p1yolo/weights/yolov3-tiny.weights'),
-    ('-cl', '--classes', False, 'path to text file containing class names', path + '/p1yolo/cfg/coco.data')
+    ('-cl', '--classes', False, 'path to text file containing class names', path + '/p1yolo/cfg/coco.data'),
+    ('-o1', '--output1', False, 'path to text file containing class names', path + '/p1_output_from_main.txt'),
+    ('-o2', '--output2', False, 'path to text file containing class names', path + '/p2_output_from_main.txt'),
+    ('-o3', '--output3', False, 'path to text file containing class names', path + '/p3_output_from_main.avi')
 ]
 
 #Ejecuta el programa principal
@@ -31,17 +34,17 @@ def main():
     args.config = os.path.realpath(args.config)
     args.weights = os.path.realpath(args.weights)
     args.classes = os.path.realpath(args.classes)
+    args.output1 = os.path.realpath(args.output1)
+    args.output2 = os.path.realpath(args.output2)
+    args.output3 = os.path.realpath(args.output3)
 
     #Cambiamos el directorio de trabajo a la ruta del programa para que funcionen las rutas relativas
     os.chdir(path)
 
-    p1_file = p1yolo.execute(args.video, args.config, args.weights, args.classes)
-    #p1_file = 'p1_output.txt'
+    p1_file = p1yolo.execute(args.video, args.config, args.weights, args.classes, args.output1, True)
 
-    p2_file = p2cropsmooth.execute(p1_file, 350)
-    #p2_file = 'p2_output.txt'
-
-    p3video.execute(args.video, p2_file)
+    #p2_file = p2cropsmooth.execute(p1_file, 350)
+    #p3video.execute(args.video, p2_file)
 
 #Obtiene los argumentos definidos
 def get_arguments():    

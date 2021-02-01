@@ -5,6 +5,8 @@ import argparse
 from collections import namedtuple
 from . import kalman as KLMN
 
+HUMAN_BODY_RATIO = 3.75
+
 Row = namedtuple("Row", "x y w h")
 Square = namedtuple("Square", "x y w")
 

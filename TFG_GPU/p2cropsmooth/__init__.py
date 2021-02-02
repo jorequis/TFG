@@ -1,3 +1,4 @@
 from . import main
 
-def execute(file, w): return main.execute(file, w)
+def execute(input_file, output_file, video_file = None):
+    return main.execute(input_file, output_file, video_file)

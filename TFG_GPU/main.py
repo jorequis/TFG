@@ -43,7 +43,8 @@ def main():
 
     p1_file = p1yolo.execute(args.video, args.config, args.weights, args.classes, args.output1, True)
 
-    #p2_file = p2cropsmooth.execute(p1_file, 350)
+    p2_file = p2cropsmooth.execute(args.output1, args.output2, args.video)
+    
     #p3video.execute(args.video, p2_file)
 
 #Obtiene los argumentos definidos

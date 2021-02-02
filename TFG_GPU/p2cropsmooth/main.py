@@ -1,47 +1,143 @@
-
 #Imports necesarios
-import math
-import argparse
 from collections import namedtuple
-from . import kalman as KLMN
+import time
+#Herramientas de vision por computador
+import cv2
 
-HUMAN_BODY_RATIO = 3.75
+#Constante para aproximar la altura de la cabeza
+HUMAN_HEAD_RATIO = 7
 
-Row = namedtuple("Row", "x y w h")
-Square = namedtuple("Square", "x y w")
+#Tuplas
+Rectangle = namedtuple("Rectangle", "x y w h")
+Vector2D = namedtuple("Vector2D", "x y")
 
-VectorSmooth = namedtuple("VectorSmooth", "x y xv yv")
+#Ejecuta el programa principal
+def main():
+    return
 
-def find_max(rows):
-    max = 0
-    for row in rows:
-        if row.w > max: max = row.w
-        #if row.h > max: max = row.h
-    return max
+def execute(input_file, output_file, video_file = None):
 
-def find_min(rows):
-    min = rows[0].w
-    for row in rows:
-        if row.w < min: min = row.w
-        #if row.h < min: min = row.h
-    return min
+    input_file = open(input_file, "r")
+    text_lines = input_file.read().splitlines()
 
-def calculate_squares(rows, squares, w):
-    #w = 250 #find_min()
-    for row in rows:
-        x = ((row.x + row.x + row.w) / 2.0) - w / 2.0
-        y = row.y - w / 4 #(row.y + row.y + row.h) / 2.0
+    video_width, video_height = parse_video_dimensions(text_lines[0])
 
-        square = Square(x, y, w)
-        squares.append(square)
+    rectangles = parse_rectangles(text_lines)
 
-def distance(prev_s, new_s):
-    p1 = [prev_s.x, prev_s.y]
-    p2 = [prev_s.x, prev_s.y]
-    return math.sqrt( ((p1[0]-p2[0])**2)+((p1[1]-p2[1])**2) )
+    head_positions = get_head_centers(rectangles)
+    smooth_positions = smooth_damp_head_positions(head_positions)
 
-def bound_prediction(prediction, w, Width, Height):
+    output = open(output_file, "w")
+
+    for position in smooth_positions:
+        output.write(f'{position.x} {position.y}\n')
+
+    output.close()
+
+    if not video_file is None:
+        video_capure = initialize_video(video_file)
+        if not video_capure is None:
+            frame_index = 0
+            while video_capure.isOpened():
+                #Leemos el siguiente fotograma del video
+                success, frame = video_capure.read()
+                #En caso de que algo falle o no queden fotogramas paramos
+                if frame is None or not success:
+                    break
+
+                original_color = (255, 0, 0) 
+                smooth_color = (0, 0, 255)
+
+                ox, oy = int(head_positions[frame_index].x), int(head_positions[frame_index].y)
+                sx, sy = int(smooth_positions[frame_index].x), int(smooth_positions[frame_index].y)
+
+                frame = cv2.rectangle(frame, (ox, oy),(ox + 2, oy + 2), original_color, 20)
+                frame = cv2.rectangle(frame, (sx, sy),(sx + 2, sy + 2), smooth_color, 20)
+                
+                frame = cv2.resize(frame, (960, 540))
+                cv2.imshow("Previsualizacion", frame)
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+
+                frame_index += 1
+                time.sleep(1 / 24)
+
+                if frame_index >= len(head_positions):
+                    break
     
+    return output_file
+
+def parse_video_dimensions(string):
+    split = string.split(" ")
+    return float(split[0]), float(split[1])
+
+def parse_rectangles(text_lines):
+    rectangles = []
+    for i in range(1, len(text_lines)):
+        rectangles.append(parse_rectangle(text_lines[i]))
+    return rectangles
+
+def parse_rectangle(string):
+    split = string.split(" ")
+    rect = Rectangle(float(split[1]), float(split[2]), float(split[3]), float(split[4]))
+    return rect
+
+#Estima el centro de la cabeza de la persona
+def aproximate_head_center(rect):
+    return Vector2D(rect.x + rect.w * 0.5, rect.y + rect.y / HUMAN_HEAD_RATIO)
+
+#Devuelve una lista de posiciones aproximadas de la cabeza
+def get_head_centers(rectangles):
+    head_positions = []
+    for rect in rectangles:
+        head_center = aproximate_head_center(rect)
+        head_positions.append(head_center)
+    return head_positions
+
+def smooth_damp_head_positions(head_positions):
+
+    smooths = []
+    smooth_vector = Vector2D(head_positions[0].x, head_positions[0].y)
+
+    velocity_x = 0
+    velocity_y = 0
+
+    smooth_time = 0.25 # 0.085
+    delta_time = 1 / 24 #fps = 24
+
+    for position in head_positions:
+        smooth_x, velocity_x = smooth_damp(smooth_vector.x, position.x, velocity_x, smooth_time, delta_time)
+        smooth_y, velocity_y = smooth_damp(smooth_vector.y, position.y, velocity_y, smooth_time, delta_time)
+
+        smooth_vector = Vector2D(smooth_x, smooth_y)
+        smooths.append(Vector2D(smooth_x, smooth_y))
+    return smooths
+
+def smooth_damp(current, target, currentVelocity, smoothTime, deltaTime):
+    smoothTime = Max(0.0001, smoothTime)
+    num1 = 2 / smoothTime
+    num2 = num1 * deltaTime
+    num3 = (1.0 / (1.0 + num2 + 0.479999989271164 * num2 * num2 + 0.234999999403954 * num2 * num2 * num2))
+    num4 = current - target
+    num5 = target
+    
+    target = current - num4
+    num7 = (currentVelocity + num1 * num4) * deltaTime
+    currentVelocity = (currentVelocity - num1 * num7) * num3
+    num8 = target + (num4 + num7) * num3
+
+    if (num5 - current > 0.0 == num8 > num5):
+        num8 = num5
+        currentVelocity = (num8 - num5) / deltaTime
+
+    return num8, currentVelocity
+
+def Max(a, b):
+    if (a > b):
+        return a
+    return b
+
+def bound_prediction(prediction, w, Width, Height):    
     x = prediction[0]# - 0.5 * w
     y = prediction[1]# - 0.5 * w
 
@@ -60,110 +156,12 @@ def bound_prediction(prediction, w, Width, Height):
     prediction[0] = x
     prediction[1] = y
 
-def smooth_squares(squares, smooths, Width, Height):
+#Devuelve un caputurador de video para sacar los fotogramas del video
+def initialize_video(video_file):
+    capture = cv2.VideoCapture(video_file)
+    #En caso de que el capturador no haya podido abrir el video devolvemos None
+    if(not capture.isOpened()): return None
+    return capture
 
-    x = round(squares[0].x)
-    y = round(squares[0].y)
-    w = round(squares[0].w)
-    
-    for i in range(0, 100): KLMN.Predict(x, y, w)
-
-    for square in squares:
-
-        x = round(square.x)
-        y = round(square.y)
-        w = round(square.w)
-        
-        prediction = KLMN.Predict(x, y, w)
-        bound_prediction(prediction, w, Width, Height)
-
-        smooth = Square(float(prediction[0]), float(prediction[1]), w)
-        smooths.append(smooth)
-
-def smooth_damp_squares(squares, smooths, Width, Height):
-
-    smooth_vector = VectorSmooth(squares[0].x, squares[0].y, 0, 0)
-    w = round(squares[0].w)
-
-    smooth_time = 0.25 # 0.085
-    delta_time = 1 / 24
-
-    for square in squares:
-
-        smooth_x = SmoothDamp(smooth_vector.x, square.x, smooth_vector.xv, smooth_time, delta_time)
-        smooth_y = SmoothDamp(smooth_vector.y, square.y, smooth_vector.yv, smooth_time, delta_time)
-
-        smooth_vector = VectorSmooth(smooth_x[0], smooth_y[0], smooth_x[1], smooth_y[1])
-        
-        prediction = [smooth_vector.x, smooth_vector.y]
-        bound_prediction(prediction, w, Width, Height)
-        
-        smooth = Square(float(prediction[0]), float(prediction[1]), w)
-        smooths.append(smooth)
-        
-        smooth = Square(square.x, square.y, w)
-        smooths.append(smooth)
-
-def SmoothDamp(current, target, currentVelocity, smoothTime, deltaTime):
-    #maxSpeed = 99999
-
-    smoothTime = Max(0.0001, smoothTime)
-    num1 = 2 / smoothTime
-    num2 = num1 * deltaTime
-    num3 = (1.0 / (1.0 + num2 + 0.479999989271164 * num2 * num2 + 0.234999999403954 * num2 * num2 * num2))
-    num4 = current - target
-    num5 = target
-    
-    target = current - num4
-    num7 = (currentVelocity + num1 * num4) * deltaTime
-    currentVelocity = (currentVelocity - num1 * num7) * num3
-    num8 = target + (num4 + num7) * num3
-
-    if (num5 - current > 0.0 == num8 > num5):
-        num8 = num5
-        currentVelocity = (num8 - num5) / deltaTime
-
-    return [num8, currentVelocity]
-
-def Max(a, b):
-    if (a > b):
-        return a
-    return b
-
-def execute(pfile, w):
-
-    rows = []
-
-    squares = []
-    smooths = []
-
-    Width = 0
-    Height = 0
-
-    input_file = open(pfile, "r")
-    lines = input_file.read().splitlines()
-
-    first_line = True
-    for line in lines:
-        split = line.split(" ")
-        if first_line:
-            first_line = False
-            Width = float(split[0])
-            Height = float(split[1])
-        else:
-            row = Row(float(split[1]), float(split[2]), float(split[3]), float(split[4]))
-            rows.append(row)
-
-    calculate_squares(rows, squares, w)
-    #smooth_squares(squares, smooths, Width, Height)
-    smooth_damp_squares(squares, smooths, Width, Height)
-
-    output_file = "p2_output.txt"
-    output = open(output_file, "w")
-
-    for smooth in smooths:
-        output.write(str(smooth.x) + " " + str(smooth.y) + " " + str(smooth.w) + "\n")
-
-    output.close()
-    
-    return output_file
+#Si ejecutamos este script como principal invocamos el metodo Main
+if __name__ == '__main__': main()

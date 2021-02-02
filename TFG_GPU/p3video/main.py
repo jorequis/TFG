@@ -51,6 +51,7 @@ def execute(video, pfile):
         cv2.imshow('frame', image)
         if cv2.waitKey(1) & 0xFF == ord('q'): break
 
+        #+2 porque en el archivo original se imprimian 2 lineas por cada rectangulo
         i += 2
 
     # Release the video file

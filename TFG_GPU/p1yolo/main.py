@@ -24,7 +24,7 @@ def main():
     return
 
 #Ejecuta el programa principal
-def execute(video_file, config, weights, coco, output_file, debug):
+def execute(video_file, config, weights, coco, output_file, debug = False):
     #Capturador de video
     video_capure = initialize_video(video_file)
     if video_capure is None:
@@ -111,7 +111,7 @@ def execute(video_file, config, weights, coco, output_file, debug):
 
         #En caso de que sea una prueba mostramos una ventana con la informacion que ve el detector
         if debug:
-            color = (255, 0, 0) if found_person else (0,0,255)
+            color = (255, 0, 0) if found_person else (0, 0, 255)
             x, y, w, h = person_rectangle.x, person_rectangle.y, person_rectangle.w, person_rectangle.h
             frame = cv2.rectangle(frame, (x, y),(x + w, y + h), color, 2)
             frame = cv2.putText(frame, prediction_name, (x - 10, y - 10), cv2.FONT_HERSHEY_COMPLEX, 1, color)

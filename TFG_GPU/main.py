@@ -8,6 +8,9 @@ import p1yolo
 import p2cropsmooth
 import p3video
 
+import cv2
+import ffmpeg
+
 #Mensaje con el modo de empleo
 USAGE = 'Modo de empleo: -v VÍDEO [OPCIÓN]... [FICHERO]...'
 
@@ -48,7 +51,7 @@ def main():
 
     #p1_code = p1yolo.execute(args.video, args.config, args.weights, args.classes, args.output1, True)
 
-    p2_code = p2cropsmooth.execute(args.output1, args.output2, args.video)
+    #p2_code = p2cropsmooth.execute(args.output1, args.output2, args.video)
     
     p3video.execute(args.video, args.output2, 720, 480, args.output3)
 

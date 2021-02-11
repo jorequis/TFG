@@ -3,6 +3,8 @@ from collections import namedtuple
 import time
 #Herramientas de vision por computador
 import cv2
+#Utiles creados para el TFG
+from tfg_utils import print_progress_bar, encode_h264
 
 #Constantes que definen como ha terminado el programa
 ERROR_VIDEO_FILE = 0
@@ -28,8 +30,10 @@ def execute(video_file, input_file, output_width, output_height, output_file, de
 
     video_fps = video_capure.get(cv2.CAP_PROP_FPS)
 
+    temp_file = output_file + ".tmp.mp4"
+
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    out = cv2.VideoWriter(output_file, fourcc, video_fps, (output_width, output_height))
+    out = cv2.VideoWriter(temp_file, fourcc, video_fps, (output_width, output_height))
 
     video_width = video_capure.get(cv2.CAP_PROP_FRAME_WIDTH)
     video_height = video_capure.get(cv2.CAP_PROP_FRAME_HEIGHT)
@@ -77,6 +81,8 @@ def execute(video_file, input_file, output_width, output_height, output_file, de
     out.release()
     # Close the window where the image is shown
     cv2.destroyAllWindows()
+    
+    encode_h264(temp_file, video_file, output_file)
 
 #Devuelve un caputurador de video para sacar los fotogramas del video
 def initialize_video(video_file):
@@ -117,20 +123,6 @@ def get_head_position_bounded(head_position, output_width, output_height, video_
         head_y = 0
 
     return Vector2D(int(head_x), int(head_y))
-
-# Print iterations progress
-def print_progress_bar (actual_frame, total_frames, decimals = 1, length = 100):
-    fill = '█'
-    unfill = '-'
-
-    percent = get_process_percent(actual_frame, total_frames, decimals)
-    filled_length = int(length * actual_frame // total_frames)
-    progress_bar = fill * filled_length + unfill * (length - filled_length)
-    print(f'\r |{progress_bar}| {percent}%', end = '\r')
-
-#Obtiene el porcentaje completado del procesamiento
-def get_process_percent(actual_frame, total_frames, decimals = 1):
-    return ("{0:." + str(decimals) + "f}").format(100 * (actual_frame / float(total_frames)))
 
 #Si ejecutamos este script como principal invocamos el metodo Main
 if __name__ == '__main__': main()

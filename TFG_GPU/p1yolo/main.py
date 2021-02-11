@@ -2,11 +2,11 @@
 import time
 #Herramientas de vision por computador
 import cv2
-import numpy as np
-import cython as cy
 from pydarknet import Detector as YoloDetector, Image as YoloImage
 #Utiles
 from collections import namedtuple
+#Utiles creados para el TFG
+from tfg_utils import print_progress_bar, get_process_percent
 
 #Constantes que definen como ha terminado el programa
 ERROR_VIDEO_FILE = 0
@@ -168,20 +168,6 @@ def write_video_dimensions(video_capure, output):
 #Escribe por la salida la prediccion con el formato correcto
 def write_prediction(label, rect, output):
     output.write(f'{label} {rect.x} {rect.y} {rect.w} {rect.h}\n')
-
-# Print iterations progress
-def print_progress_bar (actual_frame, total_frames, decimals = 1, length = 100):
-    fill = '█'
-    unfill = '-'
-
-    percent = get_process_percent(actual_frame, total_frames, decimals)
-    filled_length = int(length * actual_frame // total_frames)
-    progress_bar = fill * filled_length + unfill * (length - filled_length)
-    print(f'\r |{progress_bar}| {percent}%', end = '\r')
-
-#Obtiene el porcentaje completado del procesamiento
-def get_process_percent(actual_frame, total_frames, decimals = 1):
-    return ("{0:." + str(decimals) + "f}").format(100 * (actual_frame / float(total_frames)))
 
 #Si ejecutamos este script como principal invocamos el metodo Main
 if __name__ == '__main__': main()

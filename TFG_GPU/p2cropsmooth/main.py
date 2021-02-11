@@ -4,6 +4,8 @@ import time
 #Herramientas de vision por computador
 import cv2
 
+import tfg_utils as utils
+
 #Constantes que definen como ha terminado el programa
 ERROR_VIDEO_FILE = 0
 SUCCESS = 1
@@ -20,7 +22,6 @@ def main():
     return
 
 def execute(input_file, output_file, video_file = None):
-
     input_file = open(input_file, "r")
     text_lines = input_file.read().splitlines()
 
@@ -155,16 +156,6 @@ def show_result_in_video(video_file, head_positions, smooth_positions, video_fps
     video_capure.release()
     # Close the window where the image is shown
     cv2.destroyAllWindows()
-
-# Print iterations progress
-def print_progress_bar (actual_frame, total_frames, decimals = 1, length = 100):
-    fill = '█'
-    unfill = '-'
-
-    percent = get_process_percent(actual_frame, total_frames, decimals)
-    filled_length = int(length * actual_frame // total_frames)
-    progress_bar = fill * filled_length + unfill * (length - filled_length)
-    print(f'\r |{progress_bar}| {percent}%', end = '\r')
 
 #Si ejecutamos este script como principal invocamos el metodo Main
 if __name__ == '__main__': main()

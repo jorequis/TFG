@@ -4,12 +4,16 @@ import time
 #Herramientas de vision por computador
 import cv2
 
+#Constantes que definen como ha terminado el programa
+ERROR_VIDEO_FILE = 0
+SUCCESS = 1
+
 #Constante para aproximar la altura de la cabeza
 HUMAN_HEAD_RATIO = 7
 
 #Tuplas
-Rectangle = namedtuple("Rectangle", "x y w h")
 Vector2D = namedtuple("Vector2D", "x y")
+Rectangle = namedtuple("Rectangle", "x y w h")
 
 #Ejecuta el programa principal
 def main():
@@ -20,12 +24,12 @@ def execute(input_file, output_file, video_file = None):
     input_file = open(input_file, "r")
     text_lines = input_file.read().splitlines()
 
-    video_width, video_height = parse_video_dimensions(text_lines[0])
+    video_width, video_height, video_fps = parse_video_dimensions(text_lines[0])
 
     rectangles = parse_rectangles(text_lines)
 
     head_positions = get_head_centers(rectangles)
-    smooth_positions = smooth_damp_head_positions(head_positions)
+    smooth_positions = smooth_damp_head_positions(head_positions, video_fps)
 
     output = open(output_file, "w")
 
@@ -35,41 +39,13 @@ def execute(input_file, output_file, video_file = None):
     output.close()
 
     if not video_file is None:
-        video_capure = initialize_video(video_file)
-        if not video_capure is None:
-            frame_index = 0
-            while video_capure.isOpened():
-                #Leemos el siguiente fotograma del video
-                success, frame = video_capure.read()
-                #En caso de que algo falle o no queden fotogramas paramos
-                if frame is None or not success:
-                    break
-
-                original_color = (255, 0, 0) 
-                smooth_color = (0, 0, 255)
-
-                ox, oy = int(head_positions[frame_index].x), int(head_positions[frame_index].y)
-                sx, sy = int(smooth_positions[frame_index].x), int(smooth_positions[frame_index].y)
-
-                frame = cv2.rectangle(frame, (ox, oy),(ox + 2, oy + 2), original_color, 20)
-                frame = cv2.rectangle(frame, (sx, sy),(sx + 2, sy + 2), smooth_color, 20)
-                
-                frame = cv2.resize(frame, (960, 540))
-                cv2.imshow("Previsualizacion", frame)
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
-
-                frame_index += 1
-                time.sleep(1 / 24)
-
-                if frame_index >= len(head_positions):
-                    break
+        show_result_in_video(video_file, head_positions, smooth_positions, video_fps)
     
-    return output_file
+    return SUCCESS
 
 def parse_video_dimensions(string):
     split = string.split(" ")
-    return float(split[0]), float(split[1])
+    return float(split[0]), float(split[1]), float(split[2])
 
 def parse_rectangles(text_lines):
     rectangles = []
@@ -94,7 +70,7 @@ def get_head_centers(rectangles):
         head_positions.append(head_center)
     return head_positions
 
-def smooth_damp_head_positions(head_positions):
+def smooth_damp_head_positions(head_positions, video_fps):
 
     smooths = []
     smooth_vector = Vector2D(head_positions[0].x, head_positions[0].y)
@@ -102,8 +78,8 @@ def smooth_damp_head_positions(head_positions):
     velocity_x = 0
     velocity_y = 0
 
-    smooth_time = 0.25 # 0.085
-    delta_time = 1 / 24 #fps = 24
+    smooth_time = 0.50 # 0.085
+    delta_time = 1 / video_fps
 
     for position in head_positions:
         smooth_x, velocity_x = smooth_damp(smooth_vector.x, position.x, velocity_x, smooth_time, delta_time)
@@ -137,31 +113,58 @@ def Max(a, b):
         return a
     return b
 
-def bound_prediction(prediction, w, Width, Height):    
-    x = prediction[0]# - 0.5 * w
-    y = prediction[1]# - 0.5 * w
-
-    if(x + w > Width):
-        diff = x + w - Width
-        x -= diff
-
-    if(y + w > Height):
-        diff = x + w - Height
-        y -= diff
-
-    if(x < 0): x = 0
-
-    if(y < 0): y = 0
-
-    prediction[0] = x
-    prediction[1] = y
-
 #Devuelve un caputurador de video para sacar los fotogramas del video
 def initialize_video(video_file):
     capture = cv2.VideoCapture(video_file)
     #En caso de que el capturador no haya podido abrir el video devolvemos None
     if(not capture.isOpened()): return None
     return capture
+
+def show_result_in_video(video_file, head_positions, smooth_positions, video_fps):
+    video_capure = initialize_video(video_file)
+    if not video_capure is None:
+        frame_index = 0
+        while video_capure.isOpened():
+            #Leemos el siguiente fotograma del video
+            success, frame = video_capure.read()
+            #En caso de que algo falle o no queden fotogramas paramos
+            if frame is None or not success:
+                break
+
+            original_color = (0, 0, 255)
+            smooth_color = (0, 255, 0)
+
+            ox, oy = int(head_positions[frame_index].x), int(head_positions[frame_index].y)
+            sx, sy = int(smooth_positions[frame_index].x), int(smooth_positions[frame_index].y)
+
+            frame = cv2.rectangle(frame, (ox, oy),(ox + 2, oy + 2), original_color, 20)
+            frame = cv2.rectangle(frame, (sx, sy),(sx + 2, sy + 2), smooth_color, 20)
+            
+            frame = cv2.resize(frame, (960, 540))
+            cv2.imshow("Previsualizacion", frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+
+            frame_index += 1
+            time.sleep(1 / (video_fps * 3))
+
+            if frame_index >= len(head_positions):
+                break
+            
+    # Release the video file
+    video_capure.release()
+    # Close the window where the image is shown
+    cv2.destroyAllWindows()
+
+# Print iterations progress
+def print_progress_bar (actual_frame, total_frames, decimals = 1, length = 100):
+    fill = '█'
+    unfill = '-'
+
+    percent = get_process_percent(actual_frame, total_frames, decimals)
+    filled_length = int(length * actual_frame // total_frames)
+    progress_bar = fill * filled_length + unfill * (length - filled_length)
+    print(f'\r |{progress_bar}| {percent}%', end = '\r')
 
 #Si ejecutamos este script como principal invocamos el metodo Main
 if __name__ == '__main__': main()

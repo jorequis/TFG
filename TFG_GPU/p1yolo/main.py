@@ -162,7 +162,8 @@ def initialize_video(video_file):
 def write_video_dimensions(video_capure, output):
     width = video_capure.get(cv2.CAP_PROP_FRAME_WIDTH)
     height = video_capure.get(cv2.CAP_PROP_FRAME_HEIGHT)
-    output.write('{width} {height}\n'.format(width=width, height=height))
+    fps = video_capure.get(cv2.CAP_PROP_FPS)
+    output.write(f'{width} {height} {fps}\n')
 
 #Escribe por la salida la prediccion con el formato correcto
 def write_prediction(label, rect, output):
